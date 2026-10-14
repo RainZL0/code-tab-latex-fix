@@ -1,0 +1,9 @@
+{
+  "name": "code-tab-latex-fix",
+  "version": "0.1.0",
+  "description": "Rewrite LaTeX in replies so the Claude desktop app's Code tab renders inline math instead of raw text",
+  "author": { "name": "RainZL" },
+  "homepage": "https://github.com/RainZL0/code-tab-latex-fix",
+  "repository": "https://github.com/RainZL0/code-tab-latex-fix",
+  "license": "MIT"
+}

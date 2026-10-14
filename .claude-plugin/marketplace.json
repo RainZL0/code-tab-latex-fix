@@ -1,0 +1,6 @@
+{
+  "name": "code-tab-latex-fix",
+  "description": "Fixes LaTeX math rendering in the Claude desktop app's Code tab",
+  "owner": { "name": "RainZL" },
+  "plugins": [{ "name": "code-tab-latex-fix", "source": "./" }]
+}
