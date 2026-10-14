@@ -3,7 +3,7 @@
 //   space, tab, `(` or `[`
 // - a lone letter or number as plain text (`\(n\)` -> `n`, `\(3\)` -> `3`)
 // - braces around other inline content with no math sign (`\(x_i\)` -> `\({x_i}\)`)
-// - `\|` -> `\Vert ` inside inline math
+// - `\|` -> `\Vert ` and `\\3` -> `\\ 3` inside inline math
 // - inline math over 200 characters, and `\[...\]` that is not alone on one
 //   line, become a `$$` block
 // Code spans and fenced code blocks are left alone. Rewriting is idempotent.
@@ -121,7 +121,11 @@ export class MathSpacer {
     }
     const plain = this.math.trim().replace(/^\{(.*)\}$/, '$1')
     if (PLAIN.test(plain)) return plain
-    let c = this.math.replace(/\\([\s\S])/g, (m, ch) => (ch === '|' ? '\\Vert ' : m))
+    // the Code tab rejects `\` before `| . + * ?` or a digit, even as the
+    // second half of `\\` (a matrix row break such as `\\3`)
+    let c = this.math.replace(/\\([\s\S])/g, (m, ch: string, at: number, s: string) =>
+      ch === '|' ? '\\Vert ' : ch === '\\' && /[|.+*?\d]/.test(s.charAt(at + 2)) ? '\\\\ ' : m,
+    )
     if (!SIGN.test(c) && !/^[A-Za-z]_\d$/.test(c)) c = `{${c}}`
     if (c.length > MAX_INLINE) return this.block(c)
     return (this.space ? ' ' : '') + '\\(' + c + '\\)'

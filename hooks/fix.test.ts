@@ -31,7 +31,15 @@ test('wraps other content with no math sign in braces', () => {
 
 test('replaces \\| with \\Vert', () => {
   expect(run('范数 \\(\\|x\\|_2 = 1\\)')).toBe('范数 \\(\\Vert x\\Vert _2 = 1\\)')
-  expect(run('转义 \\(a \\\\| b\\)')).toBe('转义 \\(a \\\\| b\\)')
+  expect(run('转义 \\(a \\\\| b\\)')).toBe('转义 \\(a \\\\ | b\\)')
+})
+
+test('spaces a row break before a digit', () => {
+  const m = '矩阵 \\(\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}\\)'
+  expect(run(m)).toBe('矩阵 \\(\\begin{pmatrix}1&2\\\\ 3&4\\end{pmatrix}\\)')
+  expect(run(run(m))).toBe(run(m))
+  const ok = '\\(\\begin{cases}a\\\\b\\end{cases}\\)'
+  expect(run(ok)).toBe(ok)
 })
 
 test('works across piece boundaries', () => {
