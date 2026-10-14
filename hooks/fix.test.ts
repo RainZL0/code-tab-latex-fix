@@ -12,6 +12,24 @@ test('adds a space after full-width punctuation and CJK', () => {
   expect(run('Summation\\(^\\star\\)')).toBe('Summation \\(^\\star\\)')
 })
 
+test('puts the space before an opening * run', () => {
+  expect(run('前**\\(x^2\\)**后')).toBe('前 **\\(x^2\\)**后')
+  expect(run('前*\\(x^2\\)*后')).toBe('前 *\\(x^2\\)*后')
+  expect(run('前***\\(x^2\\)***后')).toBe('前 ***\\(x^2\\)***后')
+  expect(run('前', '*', '*\\', '(x^2\\)**后')).toBe('前 **\\(x^2\\)**后')
+})
+
+test('leaves an opening * run with a good character before it alone', () => {
+  const ok = '前 **\\(x^2\\)** 和 **\\(y^2\\)** 后\n**\\(x^2\\)**：说明\n- **\\(x^2\\)**\n| **\\(x^2\\)** |'
+  expect(run(ok)).toBe(ok)
+})
+
+test('puts the space after a closing * run', () => {
+  expect(run('**粗体**\\(x^2\\) 后')).toBe('**粗体** \\(x^2\\) 后')
+  expect(run('前 **a** 和 **b**\\(x^2\\)')).toBe('前 **a** 和 **b** \\(x^2\\)')
+  expect(run('前 **公式：\\(x^2\\)** 后')).toBe('前 **公式： \\(x^2\\)** 后')
+})
+
 test('leaves accepted cases alone', () => {
   const ok = '\\(a+b\\) 和 \\(c=1\\)\n\\(x^2\\) (\\(y^2\\)) [\\(z^2\\)] \\(x_1\\)'
   expect(run(ok)).toBe(ok)

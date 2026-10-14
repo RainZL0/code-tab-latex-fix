@@ -1,6 +1,7 @@
 // Streams reply text through and rewrites math so the Code tab renders it:
 // - a space before an inline `\(` whose previous character is not line start,
-//   space, tab, `(` or `[`
+//   space, tab, `(` or `[`; after an opening `*` run the space goes before
+//   the run, as the Code tab then looks at the character before it
 // - a lone letter or number as plain text (`\(n\)` -> `n`, `\(3\)` -> `3`)
 // - braces around other inline content with no math sign (`\(x_i\)` -> `\({x_i}\)`)
 // - `\|` -> `\Vert ` and `\\3` -> `\\ 3` inside inline math
@@ -9,6 +10,7 @@
 // Code spans and fenced code blocks are left alone. Rewriting is idempotent.
 
 const OK_BEFORE = new Set(['\n', ' ', '\t', '(', '['])
+const WHITESPACE = new Set(['\n', ' ', '\t'])
 const SIGN = /[\\^{}=<>|!+]/
 const PLAIN = /^([A-Za-z]|-?\d+(\.\d+)?)$/ // reads better as plain text than as math
 const MAX_INLINE = 200 // longest \(...\) the Code tab renders
@@ -26,6 +28,8 @@ export class MathSpacer {
   private math = '' // content after an open \( or \[
   private space = false // inline: a space goes before \(
   private lineStart = false // display: \[ was first on its line
+  private stars = new Set<string>() // `*` runs that opened emphasis and are not closed yet
+  private afterOpener = false // the `\(` being read follows an opening `*` run
 
   push(text: string): string {
     let s = this.held + text
@@ -78,6 +82,29 @@ export class MathSpacer {
         i = j
         continue
       }
+      if (c === '*' && this.inlineTicks === 0 && this.fenceTicks === 0) {
+        let j = i
+        while (j < s.length && s[j] === '*') j++
+        if (j === s.length || (s[j] === '\\' && j + 1 === s.length)) {
+          // need the next character to tell what the run is for
+          this.held = s.slice(i)
+          break
+        }
+        const run = s.slice(i, j)
+        const closing = !WHITESPACE.has(this.prev) && this.stars.has(run)
+        if (closing) this.stars.delete(run)
+        else if (!WHITESPACE.has(s.charAt(j))) this.stars.add(run)
+        if (!closing && s[j] === '\\' && s[j + 1] === '(') {
+          // a `\(` right after an opening run is judged by the character
+          // before the run: `前 **\(x\)**` renders, `前**\(x\)**` does not
+          out += this.emit((OK_BEFORE.has(this.prev) ? '' : ' ') + run)
+          this.afterOpener = true
+        } else {
+          out += this.emit(run)
+        }
+        i = j
+        continue
+      }
       if (c === '\\' && this.inlineTicks === 0 && this.fenceTicks === 0) {
         if (i + 1 === s.length) {
           this.held = '\\'
@@ -86,7 +113,8 @@ export class MathSpacer {
         const d = s.charAt(i + 1)
         if (d === '(' || d === '[') {
           this.mode = d === '(' ? 'inline' : 'display'
-          this.space = !OK_BEFORE.has(this.prev)
+          this.space = !this.afterOpener && !OK_BEFORE.has(this.prev)
+          this.afterOpener = false
           this.lineStart = this.atLineStart
           this.math = ''
         } else {
@@ -95,8 +123,11 @@ export class MathSpacer {
         i += 2
         continue
       }
-      // a blank line ends any unclosed inline code span
-      if (c === '\n' && this.prev === '\n') this.inlineTicks = 0
+      // a blank line ends any unclosed inline code span or emphasis
+      if (c === '\n' && this.prev === '\n') {
+        this.inlineTicks = 0
+        this.stars.clear()
+      }
       out += this.emit(c)
       i++
     }
