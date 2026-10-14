@@ -6,8 +6,10 @@
 // - braces around other inline content with no math sign (`\(x_i\)` -> `\({x_i}\)`)
 // - `\|` -> `\Vert ` and `\\3` -> `\\ 3` inside inline math
 // - inline math over 200 characters, and `\[...\]` that is not alone on one
-//   line, become a `$$` block
+//   line, become a `$$` block; `\[...\]` with no math sign is left as written,
+//   as markdown also uses `\[` for a plain bracket (`参见 \[1\]`)
 // Code spans and fenced code blocks are left alone. Rewriting is idempotent.
+// If the rewrite ever throws, the rest of the reply passes through unchanged.
 
 const OK_BEFORE = new Set(['\n', ' ', '\t', '(', '['])
 const WHITESPACE = new Set(['\n', ' ', '\t'])
@@ -30,8 +32,34 @@ export class MathSpacer {
   private lineStart = false // display: \[ was first on its line
   private stars = new Set<string>() // `*` runs that opened emphasis and are not closed yet
   private afterOpener = false // the `\(` being read follows an opening `*` run
+  private broken = false // a rewrite threw: pass everything through as is
 
   push(text: string): string {
+    if (this.broken) return text
+    const pending = this.pending()
+    try {
+      return this.step(text)
+    } catch {
+      this.broken = true
+      return pending + text
+    }
+  }
+
+  flush(): string {
+    const rest = this.broken ? '' : this.pending()
+    this.held = ''
+    this.math = ''
+    this.mode = 'text'
+    return rest
+  }
+
+  /** What has been taken in and not yet written out, as it was written. */
+  private pending(): string {
+    if (this.mode === 'text') return this.held
+    return (this.mode === 'inline' ? '\\(' : '\\[') + this.math + this.held
+  }
+
+  protected step(text: string): string {
     let s = this.held + text
     this.held = ''
     let out = ''
@@ -134,20 +162,13 @@ export class MathSpacer {
     return out
   }
 
-  flush(): string {
-    let rest = this.held
-    if (this.mode !== 'text') rest = (this.mode === 'inline' ? '\\(' : '\\[') + this.math + rest
-    this.held = ''
-    this.math = ''
-    this.mode = 'text'
-    return rest
-  }
 
   private close(): string {
     const mode = this.mode
     this.mode = 'text'
     if (mode === 'display') {
-      if (this.lineStart && !this.math.includes('\n')) return '\\[' + this.math + '\\]'
+      if (!SIGN.test(this.math) || (this.lineStart && !this.math.includes('\n')))
+        return '\\[' + this.math + '\\]'
       return this.block(this.math)
     }
     const plain = this.math.trim().replace(/^\{(.*)\}$/, '$1')

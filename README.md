@@ -26,9 +26,12 @@ It rewrites the reply text as it streams, before it is shown and before it is sa
 | `\(x_i\)`, `\(B[k,j]\)` | `\({x_i}\)`, `\({B[k,j]}\)` (braces added) |
 | `\(\|x\|_2 = 1\)` | `\(\Vert x\Vert _2 = 1\)` |
 | inline math over 200 characters | a `$$` block |
+| `\(\begin{pmatrix}1&2\\3&4\end{pmatrix}\)` | `\(\begin{pmatrix}1&2\\ 3&4\end{pmatrix}\)` (a `\` before a digit is rejected) |
+| `前**\(x^2\)**后` | `前 **\(x^2\)**后` (space before the bold run, not inside it) |
+| `**粗体**\(x^2\)` | `**粗体** \(x^2\)` |
 | `text \[a+b\] text` | a `$$` block on its own lines |
 
-Inline code and fenced code blocks are never touched. A `\(` with no `\)` before a blank line is left as written. Running the rewrite twice gives the same text.
+Inline code and fenced code blocks are never touched. `\[...\]` with no math sign, such as `\[1\]`, is left as written, since markdown also uses `\[` for a plain bracket. A `\(` with no `\)` before a blank line is left as written. Running the rewrite twice gives the same text.
 
 The mod adds nothing to the model's context: its code runs locally and adds no tools or prompt text.
 
@@ -62,11 +65,27 @@ Clone the repository and name its folder in the `env` block of `~/.claude/settin
 }
 ```
 
-## Notes
+To update later, run `claude plugin update code-tab-latex-fix@code-tab-latex-fix` and restart.
 
-- Tested with Claude Code 2.1.295 in the Windows desktop app. The rules above were read from the app's own code; a later app update may change them.
+## Safety
+
+- Only the reply text you read is rewritten. File writes, commands and other tool calls never pass through it, so LaTeX the model writes into files is untouched. Thinking is not touched either.
+- If the model writes no `\(` or `\[`, the mod changes nothing.
+- The changes are harmless LaTeX (a space, braces, `\Vert`), so if a later app version accepts more, they only become unneeded.
+- If the rewrite ever throws, the rest of the reply passes through unchanged, so a reply is never cut short.
+- Replies arrive in pieces cut anywhere. The tests check that every single cut, one character per piece, and thousands of random multi-cut splits all give exactly the result of rewriting the whole text at once.
+
+## Known limitations
+
+- The rules were read from the app's own code and checked against its parser with Claude Code 2.1.295 in the Windows desktop app. A later app update may change them.
+- Text in prose that is not math but looks like `\(...\)` (a regex written outside code, say) is treated as math. The Code tab would treat it as math too.
+- Bold made with `__` is not tracked (only `*`), since `_` is common inside names.
 - In the terminal, math is not rendered anyway; the rewrite is harmless there.
 - Display math written as `$$` on its own lines is left as is.
+
+## Reporting a problem
+
+Open an issue with the reply's exact text and a screenshot of what the Code tab showed. Copying from the Code tab drops backslashes; the session's transcript file under `~/.claude/projects/` keeps the text exactly as shown (after the rewrite).
 
 ## Development
 
@@ -75,7 +94,7 @@ claude plugin validate .
 claude plugin test .
 ```
 
-The rewrite is in `hooks/fix.ts` (a small streaming state machine), the hook on `turn.step` in `hooks/register.ts`, and the tests in `hooks/fix.test.ts`.
+The rewrite is in `hooks/fix.ts` (a small streaming state machine), the hook on `turn.step` in `hooks/register.ts`, and the tests in `hooks/fix.test.ts` (cases) and `hooks/split.test.ts` (streaming cuts).
 
 ## License
 

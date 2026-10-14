@@ -73,6 +73,23 @@ test('turns display math that is not alone on a line into a $$ block', () => {
   expect(run(alone)).toBe(alone)
 })
 
+test('leaves \\[...\\] with no math sign as written', () => {
+  const ok = '参见 \\[1\\] 和 \\[注\\]，以及 \\[a, b\\]'
+  expect(run(ok)).toBe(ok)
+})
+
+test('passes the rest through unchanged if a rewrite throws', () => {
+  class Boom extends MathSpacer {
+    protected step(text: string): string {
+      if (text.includes('炸')) throw new Error('boom')
+      return super.step(text)
+    }
+  }
+  const s = new Boom()
+  const out = [s.push('前：\\(a+'), s.push('炸'), s.push('后：\\(n\\)')].join('') + s.flush()
+  expect(out).toBe('前：\\(a+炸后：\\(n\\)')
+})
+
 test('turns inline math over 200 characters into a $$ block', () => {
   const long = 'a+'.repeat(110) + 'b'
   expect(run('长：\\(' + long + '\\)')).toBe('长：\n$$\n' + long + '\n$$\n')
