@@ -47,6 +47,15 @@ test('wraps other content with no math sign in braces', () => {
   expect(run('区间 \\((a,b)\\)')).toBe('区间 \\({(a,b)}\\)')
 })
 
+test('does not count an escaped punctuation mark as a math sign', () => {
+  expect(run('占 \\(50\\%\\)')).toBe('占 \\({50\\%}\\)')
+  expect(run('集合 \\(\\{c\\}\\)')).toBe('集合 \\({\\{c\\}}\\)')
+  expect(run('间距 \\(a\\,b\\) 和 \\(a \\; b\\)')).toBe('间距 \\({a\\,b}\\) 和 \\({a \\; b}\\)')
+  const ok = '\\(\\pi\\) 和 \\(\\{c\\} + 1\\) 和 \\(\\begin{cases}a\\\\b\\end{cases}\\)'
+  expect(run(ok)).toBe(ok)
+  expect(run(run('占 \\(50\\%\\)'))).toBe('占 \\({50\\%}\\)')
+})
+
 test('replaces \\| with \\Vert', () => {
   expect(run('范数 \\(\\|x\\|_2 = 1\\)')).toBe('范数 \\(\\Vert x\\Vert _2 = 1\\)')
   expect(run('转义 \\(a \\\\| b\\)')).toBe('转义 \\(a \\\\ | b\\)')

@@ -24,6 +24,7 @@ It rewrites the reply text as it streams, before it is shown and before it is sa
 | `值：\(x^2\)` | `值： \(x^2\)` (space added) |
 | `\(n\)`, `\(1000\)`, `\(-1.5\)` | `n`, `1000`, `-1.5` (plain text) |
 | `\(x_i\)`, `\(B[k,j]\)` | `\({x_i}\)`, `\({B[k,j]}\)` (braces added) |
+| `\(50\%\)`, `\(\{c\}\)`, `\(a\,b\)` | `\({50\%}\)`, `\({\{c\}}\)`, `\({a\,b}\)` (a `\` before punctuation is not a math sign) |
 | `\(\|x\|_2 = 1\)` | `\(\Vert x\Vert _2 = 1\)` |
 | inline math over 200 characters | a `$$` block |
 | `\(\begin{pmatrix}1&2\\3&4\end{pmatrix}\)` | `\(\begin{pmatrix}1&2\\ 3&4\end{pmatrix}\)` (a `\` before a digit is rejected) |

@@ -14,6 +14,9 @@
 const OK_BEFORE = new Set(['\n', ' ', '\t', '(', '['])
 const WHITESPACE = new Set(['\n', ' ', '\t'])
 const SIGN = /[\\^{}=<>|!+]/
+// since 2026-10-22 the Code tab blanks `\` + ASCII punctuation (`\%`, `\{`,
+// `\,`) before looking for a math sign in inline math
+const ESCAPED_PUNCT = /\\[!-/:-@[-`{-~]/g
 const PLAIN = /^([A-Za-z]|-?\d+(\.\d+)?)$/ // reads better as plain text than as math
 const MAX_INLINE = 200 // longest \(...\) the Code tab renders
 const MAX_BUFFER = 4000 // an opener unclosed after this many characters is not math
@@ -178,7 +181,7 @@ export class MathSpacer {
     let c = this.math.replace(/\\([\s\S])/g, (m, ch: string, at: number, s: string) =>
       ch === '|' ? '\\Vert ' : ch === '\\' && /[|.+*?\d]/.test(s.charAt(at + 2)) ? '\\\\ ' : m,
     )
-    if (!SIGN.test(c) && !/^[A-Za-z]_\d$/.test(c)) c = `{${c}}`
+    if (!SIGN.test(c.replace(ESCAPED_PUNCT, ' ')) && !/^[A-Za-z]_\d$/.test(c)) c = `{${c}}`
     if (c.length > MAX_INLINE) return this.block(c)
     return (this.space ? ' ' : '') + '\\(' + c + '\\)'
   }
